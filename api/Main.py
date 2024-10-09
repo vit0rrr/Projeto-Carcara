@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify
 import requests
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from textblob import TextBlob
-from flask_cors import CORS  # Adicione essa linha
 
 app = Flask(__name__)
-CORS(app)  # Habilite o CORS para todas as rotas
+CORS(app)
+
 
 @app.route('/analyze', methods=['GET'])
 def analyze_posts():
@@ -49,7 +50,9 @@ def analyze_posts():
 
         return jsonify(analyzed_posts), 200
     else:
-        return jsonify({'error': f"Erro ao acessar API: {response.status_code} - {response.text}"}), response.status_code
+        return jsonify(
+            {'error': f"Erro ao acessar API: {response.status_code} - {response.text}"}), response.status_code
+
 
 if __name__ == '__main__':
     app.run(debug=True)
