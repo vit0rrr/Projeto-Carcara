@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Sentimentos - Posts</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 70%;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #5a67d8;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #434190;
+        }
+        .post {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+        }
+        .post:last-child {
+            border-bottom: none;
+        }
+        .author {
+            font-weight: bold;
+            color: #5a67d8;
+        }
+        .sentiment {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            color: white;
+            margin-top: 10px;
+        }
+        .positive {
+            background-color: #48bb78;
+        }
+        .negative {
+            background-color: #f56565;
+        }
+        .neutral {
+            background-color: #e2e8f0;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Análise de Sentimentos - Posts</h1>
+    <div class="form-group">
+        <input type="text" id="searchQuery" placeholder="Digite o termo de busca...">
+        <button onclick="fetchPosts()">Buscar</button>
+    </div>
+    <div id="results"></div>
+</div>
+
+<script>
+    function fetchPosts() {
+        const query = document.getElementById('searchQuery').value;
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = ''; // Limpa os resultados anteriores
+
+        if (!query) {
+            alert('Por favor, insira um termo de busca.');
+            return;
+        }
+
+        // Fazendo a requisição para a API
+        fetch(`http://127.0.0.1:5000/analyze?q=${query}&limit=10`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resultsDiv.innerHTML = `<p>Erro: ${data.error}</p>`;
+                } else {
+                    data.forEach(post => {
+                        const postDiv = document.createElement('div');
+                        postDiv.classList.add('post');
+
+                        const author = document.createElement('p');
+                        author.classList.add('author');
+                        author.textContent = `Autor: ${post.author}`;
+
+                        const text = document.createElement('p');
+                        text.textContent = post.post_text;
+
+                        const sentiment = document.createElement('span');
+                        sentiment.classList.add('sentiment');
+
+                        if (post.sentimento === "Positivo") {
+                            sentiment.classList.add('positive');
+                            sentiment.textContent = "Sentimento: Positivo";
+                        } else if (post.sentimento === "Negativo") {
+                            sentiment.classList.add('negative');
+                            sentiment.textContent = "Sentimento: Negativo";
+                        } else {
+                            sentiment.classList.add('neutral');
+                            sentiment.textContent = "Sentimento: Neutro";
+                        }
+
+                        postDiv.appendChild(author);
+                        postDiv.appendChild(text);
+                        postDiv.appendChild(sentiment);
+
+                        resultsDiv.appendChild(postDiv);
+                    });
+                }
+            })
+            .catch(error => {
+                resultsDiv.innerHTML = `<p>Erro ao buscar os posts: ${error.message}</p>`;
+            });
+    }
+</script>
+</body>
+</html>
