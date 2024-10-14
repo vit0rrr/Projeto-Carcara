@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análise de Sentimentos - Posts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f9;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: #333;
             margin: 0;
             padding: 0;
@@ -16,46 +19,54 @@
         .container {
             max-width: 800px;
             margin: 50px auto;
-            padding: 20px;
+            padding: 30px;
             background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
         }
 
         h1 {
             text-align: center;
-            color: #333;
+            color: #444;
+            margin-bottom: 30px;
+            font-weight: 600;
         }
 
         .form-group {
-            margin-bottom: 20px;
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
         }
 
         input[type="text"] {
-            padding: 10px;
-            width: 70%;
+            padding: 15px;
+            width: 65%;
             border: 2px solid #ddd;
-            border-radius: 5px;
+            border-radius: 10px;
+            outline: none;
+            font-size: 16px;
+            margin-right: 10px;
         }
 
         button {
-            padding: 10px 20px;
-            background-color: #5a67d8;
+            padding: 15px 25px;
+            background-color: #667eea;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
             cursor: pointer;
             font-size: 16px;
+            transition: background-color 0.3s ease;
         }
 
         button:hover {
-            background-color: #434190;
+            background-color: #5550d4;
         }
 
         .post {
             border-bottom: 1px solid #ddd;
-            padding: 10px 0;
+            padding: 20px 0;
         }
 
         .post:last-child {
@@ -63,16 +74,17 @@
         }
 
         .author {
-            font-weight: bold;
-            color: #5a67d8;
+            font-weight: 600;
+            color: #667eea;
         }
 
         .sentiment {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 12px;
+            padding: 8px 12px;
+            border-radius: 20px;
             color: white;
             margin-top: 10px;
+            font-size: 14px;
         }
 
         .positive {
@@ -84,8 +96,24 @@
         }
 
         .neutral {
-            background-color: #e2e8f0;
-            color: #333;
+            background-color: #a0aec0;
+            color: white;
+        }
+
+        .no-results {
+            text-align: center;
+            font-size: 18px;
+            color: #555;
+        }
+
+        #chartContainer {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: 400px;
         }
     </style>
 </head>
@@ -97,9 +125,14 @@
         <button onclick="fetchPosts()">Buscar</button>
     </div>
     <div id="results"></div>
+    <div id="chartContainer">
+        <canvas id="sentimentChart"></canvas>
+    </div>
 </div>
 
 <script>
+    let sentimentChart;
+
     function fetchPosts() {
         const query = document.getElementById('searchQuery').value;
         const resultsDiv = document.getElementById('results');
@@ -110,13 +143,19 @@
             return;
         }
 
-        // Fazendo a requisição para a API
+        // Fazendo a requisição para a API (corrigido uso das aspas)
         fetch(`http://127.0.0.1:5000/analyze?q=${query}&limit=10`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    resultsDiv.innerHTML = `<p>Erro: ${data.error}</p>`;
+                    resultsDiv.innerHTML = `<p class="no-results">Erro: ${data.error}</p>`;
+                } else if (data.length === 0) {
+                    resultsDiv.innerHTML = `<p class="no-results">Nenhum post encontrado.</p>`;
                 } else {
+                    let positiveCount = 0;
+                    let negativeCount = 0;
+                    let neutralCount = 0;
+
                     data.forEach(post => {
                         const postDiv = document.createElement('div');
                         postDiv.classList.add('post');
@@ -134,12 +173,15 @@
                         if (post.sentimento === "Positivo") {
                             sentiment.classList.add('positive');
                             sentiment.textContent = "Sentimento: Positivo";
+                            positiveCount++;
                         } else if (post.sentimento === "Negativo") {
                             sentiment.classList.add('negative');
                             sentiment.textContent = "Sentimento: Negativo";
+                            negativeCount++;
                         } else {
                             sentiment.classList.add('neutral');
                             sentiment.textContent = "Sentimento: Neutro";
+                            neutralCount++;
                         }
 
                         postDiv.appendChild(author);
@@ -148,11 +190,41 @@
 
                         resultsDiv.appendChild(postDiv);
                     });
+
+                    updateChart(positiveCount, negativeCount, neutralCount);
                 }
             })
             .catch(error => {
-                resultsDiv.innerHTML = `<p>Erro ao buscar os posts: ${error.message}</p>`;
+                resultsDiv.innerHTML = `<p class="no-results">Erro ao buscar os posts: ${error.message}</p>`;
             });
+    }
+
+    function updateChart(positive, negative, neutral) {
+        const ctx = document.getElementById('sentimentChart').getContext('2d');
+
+        if (sentimentChart) {
+            sentimentChart.destroy(); // Destrói o gráfico anterior, se existir
+        }
+
+        sentimentChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Positivo', 'Negativo', 'Neutro'],
+                datasets: [{
+                    data: [positive, negative, neutral],
+                    backgroundColor: ['#48bb78', '#f56565', '#a0aec0'],
+                    hoverBackgroundColor: ['#38a169', '#e53e3e', '#718096']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
     }
 </script>
 </body>
